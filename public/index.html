@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Speech-to-Text Web</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Cairo', sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      nav {
+        background-color: #2C3E50;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      nav ul {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      nav li {
+        margin: 0 15px;
+        cursor: pointer;
+        transition: color 0.3s ease;
+      }
+      nav li:hover, nav li.active {
+        color: #1ABC9C;
+      }
+      main {
+        flex: 1;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        margin: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex; /* Menambahkan flex untuk section agar mengisi ruang */
+        flex-direction: column;
+      }
+      /* --- CSS BARU UNTUK AREA TRANSKRIP --- */
+      #transcribe {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .placeholder-text {
+        text-align: center;
+        color: #888;
+        margin: auto;
+      }
+      textarea.transcript-output {
+       /* Style untuk area output transkripsi */
+        width: 100%;
+        height: 100%; /* Mengisi ruang yang tersedia */
+        flex-grow: 1;
+        box-sizing: border-box; /* Agar padding & border tidak menambah ukuran */
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        font-family: 'Poppins', sans-serif; /* Menggunakan font dari kode Anda */
+        font-size: 30px; /* Menggunakan ukuran font dari kode Anda */
+        background-color: #f9f9f9;
+
+        /* --- PERBAIKAN SESUAI PERMINTAAN ANDA --- */
+         text-align: left; /* Membuat teks rata kanan-kiri */
+        line-height: 1.5;     /* Mengatur spasi antar baris menjadi 1.5 */
+
+        /* Properti penting lainnya untuk <div> agar bisa scroll */
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+      }
+      button {
+        background-color: #1ABC9C;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #16A085;
+      }
+      footer {
+        text-align: center;
+        padding: 10px;
+        background-color: #2C3E50;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      footer img {
+        width: 50px;
+        margin: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <nav>
+        <div class="logo">🎤 Speech-to-Text Web</div>
+        <ul>
+          <li :class="{ active: settings.mode == 'transcribe' }" @click="navigateTo('transcribe')">Transkrip Saya</li>
+          <li :class="{ active: settings.mode == 'badge' }" @click="navigateTo('badge')">Dashboard</li>
+        </ul>
+        <div v-if="settings.mode == 'transcribe'" class="nav-buttons">
+          <button @click="beginTranscription('single')">Mulai Transkripsi</button>
+          <button @click="stopTranscription()" style="background-color: #e67e22;">Stop</button>
+          <button @click="clearTranscript()" style="background-color: #e74c3c;">Hapus Transkripsi</button>
+        </div>
+      </nav>
+
+      <main>
+        <section v-if="settings.mode == 'badge'" id="badge">
+ <img 
+    v-if="settings.mode !== 'transcribe'" 
+    src="https://cdn.glitch.global/2b969e1e-9c5b-4f54-9799-1020fa8d0ed3/M.png?v=1743000177905" 
+    alt="logo Trans" 
+  />
+          </section>
+
+        <section id="transcribe" v-if="settings.mode == 'transcribe'">
+          <div v-if="!settings.transcription" class="placeholder-text">
+            <h2>Selamat Datang!</h2>
+            <p>Klik tombol "Mulai Transkripsi" di pojok kanan atas untuk memulai sesi transkripsi Anda.</p>
+          </div>
+          
+          <div v-else style="flex: 1; display: flex;">
+            <textarea readonly class="transcript-output">{{ singleTranscript }}</textarea>
+          </div>
+        </section>
+      </main>
+     
+     
+      <footer>
+        <img src="https://cdn.glitch.global/a1583462-4354-4d91-89dc-e33a7f5b7f50/logo_um.png?v=1714622545856" alt="Logo UM" />
+        <a href="#" @click.prevent="fetchSummaryAndDownload()">  <img src="https://cdn.glitch.global/5dd1ecc8-1471-4d5a-b953-964b91da39b3/edit.jpg?v=1741578799034" alt="Unduh Transkrip dengan Ringkasan" style="width: 30px; height: 30px;" />
+        </a>
+      </footer>
+    </div>
+
+    <script src="/script.js" defer></script>
+  </body>
+</html>
